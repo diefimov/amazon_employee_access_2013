@@ -1,21 +1,5 @@
-memory.limit(100000)
-setwd("D:/Dropbox/Eclipse/Amazon")
-library(data.table)
-library(cvTools)
-library(gbm)
-library(Metrics)
-source("fn.base.R")
-path.wd <- "D:/Dropbox/Eclipse/Amazon"
-
-assign_random_values <- function(var){
-  varUnique <- unique(var)
-  len <- length(varUnique)
-  vals <- sample(len, len)
-  df.unique <- data.frame(var = varUnique, newvar = vals)
-  df <- data.frame(id=c(1:length(var)), var=var)
-  df <- merge(df,df.unique,by="var",all.x=TRUE)
-  df[order(df$id),"newvar"]
-}
+#setwd("D:/Dropbox/Eclipse/Amazon")
+source("utils.R")
 
 colClasses <- c("numeric","numeric","numeric","numeric","numeric","numeric","numeric","numeric","numeric")
 train <- read.delim("data/train.csv",header=TRUE,sep=",",colClasses=colClasses,stringsAsFactors = FALSE)
@@ -58,22 +42,18 @@ tt$fam <- NULL
 #nresource_person - number of requested resources for the person
 tt.quant <- tt[,list(nresource_person = length(unique(resource))),by=c("person")]
 tt <- merge(tt,tt.quant,by=c("person"),all.x=TRUE)
-#ftable(tt[action>=0,nresource_person],tt[action>=0,action])
 
 #nperson_resource - number of persons requested for the resource
 tt.quant <- tt[,list(nperson_resource = length(unique(person))),by=c("resource")]
 tt <- merge(tt,tt.quant,by=c("resource"),all.x=TRUE)
-#ftable(tt[action>=0,nperson_resource],tt[action>=0,action])
 
 #nperson_resource_dept - number of requests for the resource in department
 tt.quant <- tt[,list(nperson_resource_dept = length(unique(person))),by=c("resource","dept")]
 tt <- merge(tt,tt.quant,by=c("resource","dept"),all.x=TRUE)
-#ftable(tt[action>=0,nperson_resource_dept],tt[action>=0,action])
 
 #nmgr_resource - number of managers requested for the resource
 tt.quant <- tt[,list(nmgr_resource = length(unique(mgr))),by=c("resource")]
 tt <- merge(tt,tt.quant,by=c("resource"),all.x=TRUE)
-#ftable(tt[action>=0,nmgr_resource],tt[action>=0,action])
 
 #nuperson_resource - number of upersons for the resource
 tt.quant <- tt[,list(nuperson_resource = length(unique(uperson))),by=c("resource")]
@@ -92,7 +72,6 @@ tt <- merge(tt,tt.quant,by=c("mgr","resource"),all.x=TRUE)
 ###################################################################
 
 train.lb <- data.frame(tt[action>=0])
-#train.lb <- train.lb[order(train.lb$resource),]
 test.lb <- data.frame(tt[action<0])
 train.lb[is.na(train.lb)] <- -1
 test.lb[is.na(test.lb)] <- -1
@@ -188,7 +167,7 @@ pred.gbm.train <- rep(0,nrow(train.lb))
 for (k in 1:data.cv.folds$K) {
   pred.gbm.train[which(data.cv.folds$which==k)] <- gbm.pred[[k]][[1]]
 }
-print (roc.area(train.lb[,'action'],pred.gbm.train)$A)
+print (auc(train.lb[,'action'],pred.gbm.train))
 pred.gbm.train <- data.frame(id = train.lb$id, gbm_freq2 = pred.gbm.train)
 pred.gbm.train <- pred.gbm.train[order(pred.gbm.train$id),]
 
@@ -216,7 +195,7 @@ for (iter in 1:data.cv.folds$K) {
   cols.cat <- c("resource","dept","person","role2","title","desc","mgr","uperson","role3")
   fn.register.wk(as.numeric(Sys.getenv('NUMBER_OF_PROCESSORS'))-1)
   gbm.pred <- foreach(k=1:(data.cv.folds.cv$K),.errorhandling="remove") %dopar% {
-    file.name <- "output_gbm"
+    file.name <- "output_gbm2"
     fn.init.worker(paste(file.name,k,sep=""))
     
     tt.coding <- rbind(train.cv,test.cv)
