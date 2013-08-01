@@ -1,4 +1,4 @@
-amazon_employee_access_2013
+Amazon.com - Employee Access Challenge
 ===========================
 
-solution of our team Dmitry&amp;Leustagos for Amazon competition (3rd place)
+solution of our team Dmitry&Leustagos for Amazon competition (3rd place)
