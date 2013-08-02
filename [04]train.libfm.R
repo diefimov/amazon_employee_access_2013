@@ -34,7 +34,7 @@ libfm.pred <- foreach(k=1:(data.cv.folds$K+1),.combine=rbind) %dopar% {
   val.select <-  fn.cv.which(data.cv.folds, k)
   
   data.libfm$log <- paste0("libfm_",k)
-  data.libfm$log.full <- paste0("/log/",data.libfm$log, ".log")
+  data.libfm$log.full <- paste0("log/",data.libfm$log, ".log")
   
   data.tr.libfm <- data.tr
   data.tr.libfm$ROLE_FAMILY <- NULL
@@ -55,7 +55,7 @@ libfm.pred <- foreach(k=1:(data.cv.folds$K+1),.combine=rbind) %dopar% {
     data.tr = data.libfm$tr,
     data.test = rbind(data.libfm$val,data.libfm$test),
     name = data.libfm$name,
-    dir = "/libfm"
+    dir = "libfm"
   )
 
   disk <- unlist(strsplit(path.wd,"/"))[1]

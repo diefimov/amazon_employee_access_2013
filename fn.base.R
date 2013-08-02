@@ -247,7 +247,7 @@ fn.write.libsvm <- function(
   data.test, 
   name,
   fn.y.transf = NULL, 
-  dir = "/data/output",
+  dir = "libfm",
   col.y = "ACTION",
   col.x = colnames(data.tr)[!(colnames(data.tr) %in% c(col.y, col.qid))],
   col.qid = NULL,
@@ -293,7 +293,7 @@ fn.write.libsvm <- function(
   }
   map.name <- paste(name, ".map", sep="")
   assign(map.name, model.dts)
-  save(list = map.name, file = paste(dir, "/", map.name, ".RData", sep=""))
+  save(list = map.name, file = paste0(dir, "/", map.name, ".RData"))
   cat("done \n")
   toc()
   
