@@ -1,5 +1,5 @@
 #setwd("D:/Dropbox/Eclipse/Amazon")
-source("utils.R")
+source("fn.base.R")
 
 colClasses <- c("numeric","numeric","numeric","numeric","numeric","numeric","numeric","numeric","numeric")
 train <- read.delim("data/train.csv",header=TRUE,sep=",",colClasses=colClasses,stringsAsFactors = FALSE)
