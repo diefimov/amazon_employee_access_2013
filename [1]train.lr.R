@@ -69,7 +69,8 @@ lr.pred <- foreach(k=1:(data.cv.folds$K+1),.combine=rbind) %dopar% {
               row.names = F, quote = F)
     
     lr.seed <- sample(1e7,1)
-    shell(paste("D: && cd D:/Dropbox/Eclipse/Amazon && python -u logistic_regression.py", 
+	disk <- unlist(strsplit(path.wd,"/"))[1]
+    shell(paste(disk, "&& cd", path.wd, "&& python -u logistic_regression.py", 
               tr.name, test.name, test.pred.name, lr.seed, "3 >> ", data.lr$log.full),translate=TRUE)
     
     data.lr.cur <- read.csv(file = test.pred.name)$ACTION
