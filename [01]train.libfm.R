@@ -60,13 +60,15 @@ libfm.pred <- foreach(k=1:(data.cv.folds$K+1),.combine=rbind) %dopar% {
 
   disk <- unlist(strsplit(path.wd,"/"))[1]
   path <- paste0(path.wd,"/libfm")
-  shell(paste(disk, "&& cd", path, "&& train.cmd", 
-               data.libfm$name, data.libfm$iters, ">> ", data.libfm$log.full),translate=TRUE)
+  for (it in 1:data.libfm$iters) {
+	lib_command <- paste0("libFM -train ", data.libfm$name, ".tr.libsvm -test ", data.libfm$name, ".test.libsvm -out ", data.libfm$name, ".test.pred.", it, " -init_stdev 0.5 -method mcmc -dim '1,1,12' -task c -iter 1500"
+	shell(paste(disk, "&& cd", path, "&&", lib_command, ">> ", data.libfm$log.full),translate=TRUE)
+  }
   
   data.libfm.out <- NULL
   for (i in 1:data.libfm$iters) {
     data.libfm.cur <- read.csv(
-      file = paste0("/libfm/",data.libfm$name, ".test.pred.", i),
+      file = paste0("libfm/",data.libfm$name, ".test.pred.", i),
       header = F)$V1
     if (i == 1) {
       data.libfm.out <- data.libfm.cur
