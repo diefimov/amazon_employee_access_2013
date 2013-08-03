@@ -1,5 +1,6 @@
 Out solution for Amazon.com - Employee Access Challenge 
-(3rd place, team Dmitry&Leustagos, members: Lucas Silva, Dmitry Efimov)
+https://www.kaggle.com/c/amazon-employee-access-challenge
+3rd place, team Dmitry&Leustagos, members: Lucas Silva, Dmitry Efimov
 ===========================
 
 # License
