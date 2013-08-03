@@ -234,9 +234,9 @@ def main(train, test, submit, seed, min_occurs, good_features):
 if __name__ == "__main__":
 
     name_def = '11.1'
-    args = {'train': '/data/lr/data.lr.' + name_def + '.tr.csv',
-            'test': '/data/lr/data.lr.' + name_def + '.test.csv',
-            'submit': '/data/lr/data.lr.' + name_def + '.test.pred.csv',
+    args = {'train': 'lr/data.lr.' + name_def + '.tr.csv',
+            'test': 'lr/data.lr.' + name_def + '.test.csv',
+            'submit': 'lr/data.lr.' + name_def + '.test.pred.csv',
             'seed': 123,
             'min_occurs': 3,
             'good_features': []}

@@ -1,5 +1,7 @@
 #setwd("D:/Dropbox/Eclipse/Amazon")
 source("fn.base.R")
+n.folds <- 10
+alg.name <- "glmnet"
 
 fn.opt.pred <- function(pars, data) {
   pars.m <- matrix(rep(pars,each=nrow(data)),nrow=nrow(data))
@@ -60,11 +62,9 @@ train.lb[is.na(train.lb)] <- -1
 test.lb[is.na(test.lb)] <- -1
 
 set.seed(3847569)
-data.cv.folds <- cvFolds(nrow(train.lb), K = 10, type="interleaved")
+data.cv.folds <- cvFolds(nrow(train.lb), K = n.folds, type="interleaved")
 cat("Instance CV distribution: \n")
 print(table(data.cv.folds$which))
-#1    2    3    4    5    6    7    8    9   10 
-#3277 3277 3277 3277 3277 3277 3277 3277 3277 3276 
 
 for (iter in 1:1) {
   chosen <- sample(flist,4)
@@ -75,7 +75,7 @@ for (iter in 1:1) {
   fn.register.wk(as.numeric(Sys.getenv('NUMBER_OF_PROCESSORS'))-1)
   glmnet.pred <- foreach(k=1:(data.cv.folds$K+1),.errorhandling="remove") %dopar% {
     
-    file.name <- "output_cv_glm"
+    file.name <- "output_glm"
     fn.init.worker(paste(file.name,k,sep=""))
     library(glmnet)
     
@@ -132,7 +132,7 @@ for (iter in 2:300) {
   fn.register.wk(as.numeric(Sys.getenv('NUMBER_OF_PROCESSORS'))-1)
   glmnet.pred <- foreach(k=1:(data.cv.folds$K+1),.errorhandling="remove") %dopar% {
     
-    file.name <- "output_cv_glm"
+    file.name <- "output_glm"
     fn.init.worker(paste(file.name,k,sep=""))
     library(glmnet)
     
@@ -186,8 +186,12 @@ for (iter in 2:300) {
   pred.glm.test0 <- fn.opt.pred(opt.result$par, pred.test[,cols])
   print (paste0("auc after optim: ",auc(pred.train$action, pred.glm.train0)))
 }
-pred.glm.train0 <- data.frame(id = train.lb$id, glmnet = pred.glm.train0)
+pred.glm.train0 <- data.frame(id = train.lb$id, pred = pred.glm.train0)
 pred.glm.train0 <- pred.glm.train0[order(pred.glm.train0$id),]
+pred.train <- pred.glm.train0[,"pred",drop=FALSE]
 
-pred.glm.test0 <- data.frame(id = test.lb$id, glmnet = pred.glm.test0)
+pred.glm.test0 <- data.frame(id = test.lb$id, pred = pred.glm.test0)
 pred.glm.test0 <- pred.glm.test0[order(pred.glm.test0$id),]
+pred.test <- pred.glm.test0[,"pred",drop=FALSE]
+
+save(pred.test, pred.train, file=paste0("output-R/",alg.name,".RData"))
