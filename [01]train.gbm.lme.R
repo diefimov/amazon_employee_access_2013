@@ -1,5 +1,7 @@
 source("fn.base.R")
 library("data.table")
+n.folds <- 10
+alg.name <- "gbm_lme"
 
 tic()
 cat("Loading csv data... ")
@@ -20,7 +22,7 @@ toc()
 
 tic()
 cat("Building cv... ")
-data.cv.folds <- fn.cv.folds(nrow(data.tr), K = 100, seed = 3764743)
+data.cv.folds <- fn.cv.folds(nrow(data.tr), K = n.folds, seed = 3764743)
 cat("done \n")
 toc()
 
@@ -38,7 +40,7 @@ data.lme.likelihood <- foreach(k=1:(data.cv.folds$K+1)) %dopar% {
   data.stats$tr.idx <- which(!cv.select)
   data.stats$tr <- data.tr[data.stats$tr.idx,]
   data.stats$cv.folds <- fn.cv.folds(nrow(data.stats$tr), 
-                                       K = 10, 
+                                       K = n.folds, 
                                        seed = 3764743)
   
   data.stats$tr.lme <- data.stats$tr[,0]
@@ -157,22 +159,15 @@ fn.kill.wk()
 #############################################################
 # train using lme
 #############################################################
-# set.seed(23456)
-# k.vec <- sort(sample(data.cv.folds$K,12))
-# set.seed(Sys.time())
-
-k.vec=1:(data.cv.folds$K+1)
-k <- 1
-
-model.load <- T
+model.load <- F
 model.pred.trees <- c(1000, 2000, 3000)
 
 fn.register.wk()
-gbm.lme.pred <- foreach(k=k.vec,.combine=rbind) %dopar% {
+gbm.lme.pred <- foreach(k=1:(data.cv.folds$K+1),.combine=rbind) %dopar% {
   
   fn.init.worker(paste("gbm_lme_",k,sep=""))
   
-  lme.name <- paste0("data.lme.likelihood.all.",k)
+  lme.name <- paste0("data.lme.likelihood.all.cv", data.cv.folds$K, ".", k)
   fn.load.data(lme.name)
   data.lme.likelihood <- get(lme.name)
   
@@ -221,7 +216,7 @@ gbm.lme.pred <- foreach(k=k.vec,.combine=rbind) %dopar% {
       keep.data = F,
       verbose = T)
     
-    save(model.gbm, file = model.file)
+    #save(model.gbm, file = model.file)
     
     print(model.gbm)
     print(summary(model.gbm, plotit=F))
@@ -276,11 +271,13 @@ fn.kill.wk()
 # # extract predictions
 # #############################################################
 
-data.tr.gbm.lme <- fn.extract.tr(gbm.lme.pred)
-fn.print.auc.err(data.tr, data.tr.gbm.lme)
+pred.train <- fn.extract.tr(gbm.lme.pred)
+fn.print.auc.err(data.tr, pred.train)
 #   Length      AUC
 # 1  32769 0.907547
 
-data.test.gbm.lme <- fn.extract.test(gbm.lme.pred)
-print(summary(data.tr.gbm.lme))
-print(summary(data.test.gbm.lme))
+pred.test <- fn.extract.test(gbm.lme.pred)
+print(summary(pred.train))
+print(summary(pred.test))
+
+save(pred.test, pred.train, file=paste0("output-R/",alg.name,".RData"))

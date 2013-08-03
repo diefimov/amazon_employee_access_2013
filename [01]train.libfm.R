@@ -1,4 +1,6 @@
 source("fn.base.R")
+n.folds <- 10
+alg.name <- "libfm"
 
 tic()
 cat("Loading csv data... ")
@@ -19,7 +21,7 @@ toc()
 
 tic()
 cat("Building cv... ")
-data.cv.folds <- fn.cv.folds(nrow(data.tr), K = 100, seed = 3764743)
+data.cv.folds <- fn.cv.folds(nrow(data.tr), K = n.folds, seed = 3764743)
 cat("done \n")
 toc()
 
@@ -61,8 +63,8 @@ libfm.pred <- foreach(k=1:(data.cv.folds$K+1),.combine=rbind) %dopar% {
   disk <- unlist(strsplit(path.wd,"/"))[1]
   path <- paste0(path.wd,"/libfm")
   for (it in 1:data.libfm$iters) {
-	lib_command <- paste0("libFM -train ", data.libfm$name, ".tr.libsvm -test ", data.libfm$name, ".test.libsvm -out ", data.libfm$name, ".test.pred.", it, " -init_stdev 0.5 -method mcmc -dim '1,1,12' -task c -iter 1500"
-	shell(paste(disk, "&& cd", path, "&&", lib_command, ">> ", data.libfm$log.full),translate=TRUE)
+	  lib_command <- paste0("libFM -train ", data.libfm$name, ".tr.libsvm -test ", data.libfm$name, ".test.libsvm -out ", data.libfm$name, ".test.pred.", it, " -init_stdev 0.5 -method mcmc -dim '1,1,12' -task c -iter 1500")
+	  shell(paste(disk, "&& cd", path, "&&", lib_command, ">> ", data.libfm$log.full),translate=TRUE)
   }
   
   data.libfm.out <- NULL
@@ -107,11 +109,13 @@ fn.kill.wk()
 #############################################################
 # extract predictionl
 #############################################################
-data.tr.libfm <- fn.extract.tr(libfm.pred)
-fn.print.auc.err(data.tr, data.tr.libfm)
+pred.train <- fn.extract.tr(libfm.pred)
+fn.print.auc.err(data.tr, pred.train)
 #   Length       AUC
 # 1  32769 0.8936904
-print(summary(data.tr.libfm))
+print(summary(pred.train))
 
-data.test.libfm <- fn.extract.test(libfm.pred)
-print(summary(data.test.libfm))
+pred.test <- fn.extract.test(libfm.pred)
+print(summary(pred.test))
+
+save(pred.test, pred.train, file=paste0("output-R/",alg.name,".RData"))

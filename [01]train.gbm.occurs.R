@@ -1,5 +1,6 @@
 source("fn.base.R")
-library("data.table")
+n.folds <- 10
+alg.name <- "gbm_occurs"
 
 tic()
 cat("Loading csv data... ")
@@ -20,28 +21,28 @@ toc()
 
 tic()
 cat("Building cv... ")
-data.cv.folds <- fn.cv.folds(nrow(data.tr), K = 100, seed = 3764743)
+data.cv.folds <- fn.cv.folds(nrow(data.tr), K = n.folds, seed = 3764743)
 cat("done \n")
 toc()
 
 cat("Building previous occurrences table...\n")
 fn.register.wk()
-prev.occurs <- foreach(k=1:(data.cv.folds$K+1),.combine=rbind) %dopar% {
+prev.occurs <- foreach(k=1:2,.combine=rbind) %dopar% {
   library("data.table")
   val.select <-  fn.cv.which(data.cv.folds, k)
   val.idx <- which(val.select)
   tr.idx <- which(!val.select)
     
-  if (k <= data.cv.folds$K) {
-    data.tr.occurs <- data.tr[tr.idx,]
-    data.test.occurs <- data.tr[val.idx,]
-    data.test.occurs$test.idx <- val.idx
-    data.test.occurs$datatype <- "tr"
-  } else if (k == (data.cv.folds$K+1)) {
-    data.tr.occurs <- data.tr
+  if (k == 1) {
+    data.tr.occurs <- rbind(data.tr,data.test)
+    data.test.occurs <- data.tr
+    data.test.occurs$test.idx <- 1:nrow(data.test.occurs)
+    data.test.occurs$datatype <- "tr2"
+  } else if (k == 2) {
+    data.tr.occurs <- rbind(data.tr,data.test)
     data.test.occurs <- data.test
     data.test.occurs$test.idx <- 1:nrow(data.test.occurs)
-    data.test.occurs$datatype <- "test"
+    data.test.occurs$datatype <- "test2"
   }
   
   data.test.occurs$ACTION <- NULL
@@ -72,6 +73,7 @@ prev.occurs <- foreach(k=1:(data.cv.folds$K+1),.combine=rbind) %dopar% {
   data.test.occurs
 }
 fn.kill.wk()
+
 data.tr.occurs <- fn.extract.pred(prev.occurs, "tr2")
 print(summary(data.tr.occurs$RESOURCE))
 data.test.occurs <- fn.extract.pred(prev.occurs, "test2")
@@ -129,7 +131,7 @@ gbm.occurs.pred <- foreach(k=1:(data.cv.folds$K+1),.combine=rbind) %dopar% {
            interaction.depth = 20) 
     
     
-    save(model.gbm, file = model.file)
+    #save(model.gbm, file = model.file)
     print(model.gbm)
     print(summary(model.gbm, plotit=F))
   }
@@ -179,21 +181,17 @@ gbm.occurs.pred <- foreach(k=1:(data.cv.folds$K+1),.combine=rbind) %dopar% {
   rbind(data.pred, data.pred.test)
 }
 fn.kill.wk()
-#fn.save.data("gbm.occurs.pred")
-# fn.load.data("gbm.occurs.pred")
 
 #############################################################
-# extract predictionl
+# extract predictions
 # #############################################################
-# fn.load.data("data.tr.gbm.occurs")
-# fn.load.data("data.test.gbm.occurs")
-
-data.tr.gbm.occurs <- fn.extract.tr(gbm.occurs.pred)
-
-fn.print.auc.err(data.tr, data.tr.gbm.occurs)
+pred.train <- fn.extract.tr(gbm.occurs.pred)
+fn.print.auc.err(data.tr, pred.train)
 #   Length       AUC
 # 1  32769 0.8964196
 
-data.test.gbm.occurs <- fn.extract.test(gbm.occurs.pred)
-print(summary(data.tr.gbm.occurs))
-print(summary(data.test.gbm.occurs))
+pred.test <- fn.extract.test(gbm.occurs.pred)
+print(summary(pred.train))
+print(summary(pred.test))
+
+save(pred.test, pred.train, file=paste0("output-R/",alg.name,".RData"))

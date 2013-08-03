@@ -1,5 +1,7 @@
 #setwd("D:/Dropbox/Eclipse/Amazon")
 source("fn.base.R")
+n.folds <- 10
+alg.name <- "gbm_freq_hom2"
 
 colClasses <- c("numeric","numeric","numeric","numeric","numeric","numeric","numeric","numeric","numeric")
 train <- read.delim("data/train.csv",header=TRUE,sep=",",colClasses=colClasses,stringsAsFactors = FALSE)
@@ -77,7 +79,7 @@ train.lb[is.na(train.lb)] <- -1
 test.lb[is.na(test.lb)] <- -1
 
 set.seed(3847569)
-data.cv.folds <- cvFolds(nrow(train.lb), K = 100, type="interleaved")
+data.cv.folds <- cvFolds(nrow(train.lb), K = n.folds, type="interleaved")
 cat("Instance CV distribution: \n")
 print(table(data.cv.folds$which))
 
@@ -168,7 +170,7 @@ for (k in 1:data.cv.folds$K) {
   pred.gbm.train[which(data.cv.folds$which==k)] <- gbm.pred[[k]][[1]]
 }
 print (auc(train.lb[,'action'],pred.gbm.train))
-pred.gbm.train <- data.frame(id = train.lb$id, gbm_freq2 = pred.gbm.train)
+pred.gbm.train <- data.frame(id = train.lb$id, pred = pred.gbm.train)
 pred.gbm.train <- pred.gbm.train[order(pred.gbm.train$id),]
 
 #on test (homogeneous)
@@ -176,8 +178,10 @@ pred.gbm.test.hom <- rep(0,nrow(test.lb))
 for (k in 1:data.cv.folds$K) {
   pred.gbm.test.hom <- pred.gbm.test.hom + gbm.pred[[k]][[2]]
 }
-pred.gbm.test.hom <- data.frame(id = test.lb$id, gbm_freq_hom2_100 = pred.gbm.test.hom/data.cv.folds$K)
+pred.gbm.test.hom <- data.frame(id = test.lb$id, pred = pred.gbm.test.hom/data.cv.folds$K)
 pred.gbm.test.hom <- pred.gbm.test.hom[order(pred.gbm.test.hom$id),]
+colnames(pred.gbm.test.hom) <- c("id",alg.name)
+pred.test <- pred.gbm.test.hom[,alg.name,drop=FALSE]
 
 #homogeneous gbm on train
 pred.gbm.train.hom <- rep(0,nrow(train.lb))
@@ -187,7 +191,7 @@ for (iter in 1:data.cv.folds$K) {
 
   train.cv <- train.lb[which(data.cv.folds$which!=iter),]
   test.cv <- train.lb[which(data.cv.folds$which==iter),]
-  data.cv.folds.cv <- cvFolds(nrow(train.cv), K = 100)
+  data.cv.folds.cv <- cvFolds(nrow(train.cv), K = n.folds)
   cat("Instance CV distribution: \n")
   print(table(data.cv.folds.cv$which))
   
@@ -275,7 +279,10 @@ for (iter in 1:data.cv.folds$K) {
 }
 #extract prediction
 #on train (homogeneous)
-pred.gbm.train.hom <- data.frame(id = train.lb$id, gbm_freq_hom2_100 = pred.gbm.train.hom/data.cv.folds.cv$K)
-print (auc(train.lb[,'action'],pred.gbm.train.hom[,"gbm_freq_hom2_100"]))
+pred.gbm.train.hom <- data.frame(id = train.lb$id, pred = pred.gbm.train.hom/data.cv.folds.cv$K)
+print (auc(train.lb[,'action'],pred.gbm.train.hom[,"pred"]))
 pred.gbm.train.hom <- pred.gbm.train.hom[order(pred.gbm.train.hom$id),]
+colnames(pred.gbm.train.hom) <- c("id",alg.name)
+pred.train <- pred.gbm.train.hom[,alg.name,drop=FALSE]
 
+save(pred.test, pred.train, file=paste0("output-R/",alg.name,".RData"))

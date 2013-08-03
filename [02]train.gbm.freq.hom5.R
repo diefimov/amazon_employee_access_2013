@@ -1,5 +1,7 @@
 #setwd("D:/Dropbox/Eclipse/Amazon")
 source("fn.base.R")
+n.folds <- 10
+alg.name <- "gbm_freq_hom5"
 
 colClasses <- c("numeric","numeric","numeric","numeric","numeric","numeric","numeric","numeric","numeric")
 train <- read.delim("data/train.csv",header=TRUE,sep=",",colClasses=colClasses,stringsAsFactors = FALSE)
