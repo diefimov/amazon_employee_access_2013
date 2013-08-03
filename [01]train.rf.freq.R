@@ -128,11 +128,11 @@ for (k in 1:data.cv.folds$K) {
 print (auc(train.lb[,'action'],pred.rf.train))
 pred.rf.train <- data.frame(id = train.lb$id, pred = pred.rf.train)
 pred.rf.train <- pred.rf.train[order(pred.rf.train$id),]
-pred.train <- pred.rf.train[,alg.name,drop=FALSE]
+pred.train <- pred.rf.train[,"pred",drop=FALSE]
 
 #on test (single)
 pred.rf.test <- data.frame(id = test.lb$id, pred = rf.pred[[data.cv.folds$K+1]])
 pred.rf.test <- pred.rf.test[order(pred.rf.test$id),]
-pred.test <- pred.rf.test[,alg.name,drop=FALSE]
+pred.test <- pred.rf.test[,"pred",drop=FALSE]
 
 save(pred.test, pred.train, file=paste0("output-R/",alg.name,".RData"))
