@@ -1,4 +1,6 @@
 source("fn.base.R")
+n.folds <- 10
+alg.name <- "lr2"
 
 tic()
 cat("Loading csv data... ")
@@ -19,7 +21,7 @@ toc()
 
 tic()
 cat("Building cv... ")
-data.cv.folds <- fn.cv.folds(nrow(data.tr), K = 100, seed = 3764743)
+data.cv.folds <- fn.cv.folds(nrow(data.tr), K = n.folds, seed = 3764743)
 cat("done \n")
 toc()
 
@@ -33,8 +35,8 @@ lr.pred <- foreach(k=1:(data.cv.folds$K+1),.combine=rbind) %dopar% {
   
   val.select <-  fn.cv.which(data.cv.folds, k)
   
-  data.lr$log <- paste0("lr_",k)
-  data.lr$log.full <- paste0("../data/log/",data.lr$log, ".log")
+  data.lr$log <- paste0("lr2_",k)
+  data.lr$log.full <- paste0("log/",data.lr$log, "_python.log")
   
   data.tr.lr <- data.tr
   data.test.lr <- data.test
@@ -54,13 +56,11 @@ lr.pred <- foreach(k=1:(data.cv.folds$K+1),.combine=rbind) %dopar% {
   data.lr.out <- NULL
   
   it.start <- 1
-#   if (k %in% c(7)) { it.start <- 7 }
   for (it in it.start:data.lr$iters) {
-    
     it.name <- paste0(data.lr$name, ".", it)
-    tr.name <- paste0("data/lr/",it.name, ".tr.csv")
-    test.name <- paste0("data/lr/",it.name, ".test.csv")
-    test.pred.name <- paste0("data/lr/",it.name, ".test.pred.csv")
+    tr.name <- paste0("lr/",it.name, ".tr.csv")
+    test.name <- paste0("lr/",it.name, ".test.csv")
+    test.pred.name <- paste0("lr/",it.name, ".test.pred.csv")
     write.csv(data.lr$tr,
               file = tr.name,
               row.names = F, quote = F)
@@ -69,9 +69,10 @@ lr.pred <- foreach(k=1:(data.cv.folds$K+1),.combine=rbind) %dopar% {
               row.names = F, quote = F)
     
     lr.seed <- sample(1e7,1)
-	disk <- unlist(strsplit(pathwd,"/"))[1]
+    
+    disk <- unlist(strsplit(path.wd,"/"))[1]
     shell(paste(disk, "&& cd", path.wd, "&& python -u logistic_regression.py", 
-              tr.name, test.name, test.pred.name, lr.seed, "3 >> ", data.lr$log.full),translate=TRUE)
+                tr.name, test.name, test.pred.name, lr.seed, "3 >> ", data.lr$log.full),translate=TRUE)
     
     data.lr.cur <- read.csv(file = test.pred.name)$ACTION
     if (NROW(data.lr$val) > 0) {
@@ -88,7 +89,7 @@ lr.pred <- foreach(k=1:(data.cv.folds$K+1),.combine=rbind) %dopar% {
   
   data.pred <- NULL
   if (NROW(data.lr$val) > 0) {
-  
+    
     data.pred <- data.frame(
       datatype = "tr",
       test.idx = data.lr$val.idx,
@@ -99,9 +100,9 @@ lr.pred <- foreach(k=1:(data.cv.folds$K+1),.combine=rbind) %dopar% {
   }
   
   data.pred.test <- data.frame(
-      datatype = "test",
-      test.idx = 1:nrow(data.test),
-      pred = tail(data.lr.out, n = nrow(data.test)))
+    datatype = "test",
+    test.idx = 1:nrow(data.test),
+    pred = tail(data.lr.out, n = nrow(data.test)))
   
   print(summary(data.pred.test$pred))
   
@@ -109,16 +110,16 @@ lr.pred <- foreach(k=1:(data.cv.folds$K+1),.combine=rbind) %dopar% {
   rbind(data.pred, data.pred.test)
 }
 fn.kill.wk()
-
 #############################################################
 # extract predictions
 #############################################################
-data.tr.lr <- fn.extract.tr(lr.pred)
-fn.print.auc.err(data.tr, data.tr.lr)
+pred.train <- fn.extract.tr(lr.pred)
+fn.print.auc.err(data.tr, pred.train)
 #   Length       AUC
 # 1  32769 0.8906123
 
-data.test.lr <- fn.extract.test(lr.pred)
-print(summary(data.tr.lr))
-print(summary(data.test.lr))
+pred.test <- fn.extract.test(lr.pred)
+print(summary(pred.train))
+print(summary(pred.test))
 
+save(pred.test, pred.train, file=paste0("output-R/",alg.name,".RData"))

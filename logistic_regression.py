@@ -240,7 +240,6 @@ if __name__ == "__main__":
             'seed': 123,
             'min_occurs': 3,
             'good_features': []}
-
     if len(sys.argv) >= 2:
         args['train'] = sys.argv[1]
 
