@@ -122,7 +122,7 @@ ix <- which(resdf$libfm>0.9)
 resdf[ix,"pred"] <- resdf$similarity[ix]
 auc(resdf$action,resdf$pred)
 pred.train <- resdf[,"pred",drop=FALSE]
-auc(train$ACTION,pred.train$pred)
+auc(action0,pred.train$pred)
 
 data.test.gbm.occurs <- fn.extract.test(gbm.occurs.pred)
 resdf <- data.frame(similarity=data.test.gbm.occurs[,1],libfm=data.test$libfm)
