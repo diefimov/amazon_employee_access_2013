@@ -63,10 +63,16 @@ tt <- merge(tt,tt.quant,by=c("resource"),all.x=TRUE)
 tt.quant <- tt[,list(nuperson_resource_dept = length(unique(uperson))),by=c("resource","dept")]
 tt <- merge(tt,tt.quant,by=c("resource","dept"),all.x=TRUE)
 
-load("D:/Dropbox/Eclipse/Amazon2013/pred.lucas.RData")
-pred.train.lucas[,"id"] <- train[,id]
-pred.test.lucas[,"id"] <- test[,id]
-pred <- rbind(pred.train.lucas[,c("id","libfm")], pred.test.lucas[,c("id","libfm")])
+load("output-R/libfm.RData")
+if (ncol(pred.train)>1) {
+	print ("Something wrong with libfm model")
+} else {
+	colnames(pred.train) <- "libfm"
+	colnames(pred.test) <- "libfm"
+}
+pred.train[,"id"] <- train[,id]
+pred.test[,"id"] <- test[,id]
+pred <- rbind(pred.train[,c("id","libfm")], pred.test[,c("id","libfm")])
 tt <- merge(tt,pred,by="id",all.x=TRUE)
 
 ###################################################################
@@ -85,7 +91,7 @@ new_action[which(train.lb$libfm<=0.9 & action0==0)] <- 1
 train.lb$action <- new_action
 
 set.seed(3847569)
-data.cv.folds <- cvFolds(nrow(train.lb), K = 100, type="interleaved")
+data.cv.folds <- cvFolds(nrow(train.lb), K = n.folds, type="interleaved")
 cat("Instance CV distribution: \n")
 print(table(data.cv.folds$which))
 
@@ -170,15 +176,15 @@ for (k in 1:data.cv.folds$K) {
 print (auc(train.lb[,'action'],pred.gbm.train))
 
 resdf <- data.frame(id=train.lb$id,action=action0,similarity=pred.gbm.train,libfm=train.lb$libfm)
-resdf[,"gbm_freq5"] <- resdf$libfm
+resdf[,"pred"] <- resdf$libfm
 ix <- which(resdf$libfm<=0.9)
-resdf[ix,"gbm_freq5"] <- 1-resdf$similarity[ix]
+resdf[ix,"pred"] <- 1-resdf$similarity[ix]
 ix <- which(resdf$libfm>0.9)
-resdf[ix,"gbm_freq5"] <- resdf$similarity[ix]
-auc(resdf$action,resdf$gbm_freq5)
+resdf[ix,"pred"] <- resdf$similarity[ix]
+auc(resdf$action,resdf$pred)
 resdf <- resdf[order(resdf$id),]
-pred.gbm.train <- resdf[,c("id","gbm_freq5")]
-auc(train[,action],pred.gbm.train$gbm_freq5)
+pred.gbm.train <- resdf[,c("id","pred")]
+auc(train[,action],pred.gbm.train$pred)
 
 #on test (homogeneous)
 pred.gbm.test.hom <- rep(0,nrow(test.lb))
@@ -186,14 +192,15 @@ for (k in 1:data.cv.folds$K) {
   pred.gbm.test.hom <- pred.gbm.test.hom + gbm.pred[[k]][[2]]
 }
 resdf <- data.frame(id=test.lb$id,similarity=pred.gbm.test.hom/data.cv.folds$K,libfm=test.lb$libfm)
-resdf[,"gbm_freq_hom5_100"] <- resdf$libfm
+resdf[,"pred"] <- resdf$libfm
 ix <- which(resdf$libfm<=0.9)
-resdf[ix,"gbm_freq_hom5_100"] <- 1-resdf$similarity[ix]
+resdf[ix,"pred"] <- 1-resdf$similarity[ix]
 ix <- which(resdf$libfm>0.9)
-resdf[ix,"gbm_freq_hom5_100"] <- resdf$similarity[ix]
+resdf[ix,"pred"] <- resdf$similarity[ix]
 resdf <- resdf[order(resdf$id),]
-pred.gbm.test.hom <- resdf[,c("id","gbm_freq_hom5_100")]
+pred.gbm.test.hom <- resdf[,c("id","pred")]
 pred.gbm.test.hom <- pred.gbm.test.hom[order(pred.gbm.test.hom$id),]
+pred.test <- pred.gbm.test.hom[,"pred",drop=FALSE]
 
 #homogeneous gbm on train
 pred.gbm.train.hom <- rep(0,nrow(train.lb))
@@ -202,7 +209,7 @@ for (iter in 1:data.cv.folds$K) {
   
   train.cv <- train.lb[which(data.cv.folds$which!=iter),]
   test.cv <- train.lb[which(data.cv.folds$which==iter),]
-  data.cv.folds.cv <- cvFolds(nrow(train.cv), K = 100)
+  data.cv.folds.cv <- cvFolds(nrow(train.cv), K = n.folds)
   cat("Instance CV distribution: \n")
   print(table(data.cv.folds.cv$which))
   
@@ -283,13 +290,15 @@ for (iter in 1:data.cv.folds$K) {
 #extract prediction
 #on train (homogeneous)
 resdf <- data.frame(id=train.lb$id,action=action0,similarity=pred.gbm.train.hom/data.cv.folds$K,libfm=train.lb$libfm)
-resdf[,"gbm_freq_hom5_100"] <- resdf$libfm
+resdf[,"pred"] <- resdf$libfm
 ix <- which(resdf$libfm<=0.9)
-resdf[ix,"gbm_freq_hom5_100"] <- 1-resdf$similarity[ix]
+resdf[ix,"pred"] <- 1-resdf$similarity[ix]
 ix <- which(resdf$libfm>0.9)
-resdf[ix,"gbm_freq_hom5_100"] <- resdf$similarity[ix]
-print (auc(resdf$action,resdf$gbm_freq_hom5_100))
+resdf[ix,"pred"] <- resdf$similarity[ix]
+print (auc(resdf$action,resdf$pred))
 resdf <- resdf[order(resdf$id),]
-pred.gbm.train.hom <- resdf[,c("id","gbm_freq_hom5_100")]
-print (auc(action0,pred.gbm.train.hom[,"gbm_freq_hom5_100"]))
+pred.gbm.train.hom <- resdf[,c("id","pred")]
+print (auc(action0,pred.gbm.train.hom[,"pred"]))
+pred.train <- pred.gbm.train.hom[,"pred",drop=FALSE]
 
+save(pred.test, pred.train, file=paste0("output-R/",alg.name,".RData"))

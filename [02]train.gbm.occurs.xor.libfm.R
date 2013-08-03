@@ -1,5 +1,7 @@
 #setwd("D:/Dropbox/Eclipse/Amazon")
 source("fn.base.R")
+n.folds <- 10
+alg.name <- "gbm_occurs_xor_libfm"
 
 tic()
 cat("Loading csv data... ")
@@ -20,7 +22,7 @@ toc()
 
 tic()
 cat("Building cv... ")
-data.cv.folds <- fn.cv.folds(nrow(data.tr), K = 100, seed = 3764743)
+data.cv.folds <- fn.cv.folds(nrow(data.tr), K = n.folds, seed = 3764743)
 cat("done \n")
 toc()
 
@@ -30,9 +32,15 @@ fn.load.data("data.test.occurs")
 data.tr <- cbind(data.tr[,"ACTION", drop = F], data.tr.occurs)
 data.test <- cbind(data.test[,"ACTION", drop = F], data.test.occurs)
 
-load("D:/Dropbox/Eclipse/Amazon2013/pred.lucas.RData")
-data.tr <- cbind(data.tr,pred.train.lucas[,"libfm",drop=F])
-data.test <- cbind(data.test,pred.test.lucas[,"libfm",drop=F])
+load("output-R/libfm.RData")
+if (ncol(pred.train)>1) {
+	print ("Something wrong with libfm model")
+} else {
+	colnames(pred.train) <- "libfm"
+	colnames(pred.test) <- "libfm"
+}
+data.tr <- cbind(data.tr,pred.train[,"libfm",drop=F])
+data.test <- cbind(data.test,pred.test[,"libfm",drop=F])
 
 action0 <- data.tr$ACTION
 new_action <- rep(0,nrow(data.tr))
@@ -51,7 +59,7 @@ gbm.occurs.pred <- foreach(k=1:(data.cv.folds$K+1),.combine=rbind) %dopar% {
   val.select <-  fn.cv.which(data.cv.folds, k)
   
   data.gbm.occurs$log <- paste0("gbm_occurs_",k)
-  data.gbm.occurs$log.full <- paste0("/log/",data.gbm.occurs$log, ".log")
+  data.gbm.occurs$log.full <- paste0("log/",data.gbm.occurs$log, ".log")
   
   #fn.init.worker(data.gbm.occurs$log)
   
@@ -107,21 +115,22 @@ fn.kill.wk()
 
 data.tr.gbm.occurs <- fn.extract.tr(gbm.occurs.pred)
 resdf <- data.frame(action=action0,similarity=data.tr.gbm.occurs[,1],libfm=data.tr$libfm)
-resdf[,"gbm_occurs_xor_libfm"] <- resdf$libfm
+resdf[,"pred"] <- resdf$libfm
 ix <- which(resdf$libfm<=0.9)
-resdf[ix,"gbm_occurs_xor_libfm"] <- 1-resdf$similarity[ix]
+resdf[ix,"pred"] <- 1-resdf$similarity[ix]
 ix <- which(resdf$libfm>0.9)
-resdf[ix,"gbm_occurs_xor_libfm"] <- resdf$similarity[ix]
-auc(resdf$action,resdf$gbm_occurs_xor_libfm)
-pred.tr.gbm.occurs.libfm <- resdf[,"gbm_occurs_xor_libfm"]
-auc(train$ACTION,pred.tr.gbm.occurs.libfm)
+resdf[ix,"pred"] <- resdf$similarity[ix]
+auc(resdf$action,resdf$pred)
+pred.train <- resdf[,"pred",drop=FALSE]
+auc(train$ACTION,pred.train$pred)
 
 data.test.gbm.occurs <- fn.extract.test(gbm.occurs.pred)
 resdf <- data.frame(similarity=data.test.gbm.occurs[,1],libfm=data.test$libfm)
-resdf[,"gbm_occurs_xor_libfm"] <- resdf$libfm
+resdf[,"pred"] <- resdf$libfm
 ix <- which(resdf$libfm<=0.9)
-resdf[ix,"gbm_occurs_xor_libfm"] <- 1-resdf$similarity[ix]
+resdf[ix,"pred"] <- 1-resdf$similarity[ix]
 ix <- which(resdf$libfm>0.9)
-resdf[ix,"gbm_occurs_xor_libfm"] <- resdf$similarity[ix]
-pred.test.gbm.occurs.libfm <- resdf[,"gbm_occurs_xor_libfm"]
+resdf[ix,"pred"] <- resdf$similarity[ix]
+pred.test <- resdf[,"pred",drop=FALSE]
 
+save(pred.test, pred.train, file=paste0("output-R/",alg.name,".RData"))
