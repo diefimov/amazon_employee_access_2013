@@ -1,5 +1,5 @@
 Out solution for Amazon.com - Employee Access Challenge 
-(3rd place, team Dmitry&Leustagos, participants: Lucas Silva, Dmitry Efimov)
+(3rd place, team Dmitry&Leustagos, members: Lucas Silva, Dmitry Efimov)
 ===========================
 
 # License
