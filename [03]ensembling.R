@@ -22,7 +22,7 @@ setnames(test,c("id","action","resource","mgr","role1","role2","dept","title","d
 pred.train.ens <- data.frame(action = train[,action])
 pred.test.ens <- data.frame(id = test[,id])
 for (alg in algs) {
-	load(paste0("output-R/",alg,".RData")
+	load(paste0("output-R/",alg,".RData"))
 	colnames(pred.train) <- alg
 	colnames(pred.test) <- alg
 	pred.train.ens <- cbind(pred.train.ens,pred.train)
@@ -30,13 +30,17 @@ for (alg in algs) {
 }
 
 #find best combination using expand.grid
-a <- as.matrix(expand.grid( rep(list(0:7),length(cols)) ))
+a <- as.matrix(expand.grid( rep(list(0:4),length(algs)) ))
 a <- a[which(rowSums(a)>0),]
 coeffs <- findBestCombination(pred.train.ens[,algs],pred.train.ens[,"action"],a)
 print (coeffs)
 ens.train <- as.matrix(pred.train.ens[,algs]) %*% (coeffs/sum(coeffs))
 print (auc(pred.train.ens$action,ens.train))
 ens.test <- as.matrix(pred.test.ens[,algs]) %*% (coeffs/sum(coeffs))
+
+subm <- data.frame(Id=pred.test.ens$id,Action=ens.test)
+subm <- subm[order(subm$Id),]
+write.csv(subm,file="prediction_expandgrid.csv",quote=FALSE,row.names=FALSE)
 
 #find best combination using optim
 fn.opt.pred <- function(pars, data) {
@@ -52,6 +56,10 @@ ens.train <- fn.opt.pred(opt.result$par, pred.train.ens[,algs])
 ens.test <- fn.opt.pred(opt.result$par, pred.test[,algs])
 auc(pred.train.ens[,"action"],ens.train)
 
+subm <- data.frame(Id=pred.test.ens$id,Action=ens.test)
+subm <- subm[order(subm$Id),]
+write.csv(subm,file="prediction_optim.csv",quote=FALSE,row.names=FALSE)
+
 #the best linear combination
 algs <- c("gbm_freq_hom2","gbm_freq_hom3","gbm_lme","gbm_occurs","glmnet","glmnet2","lr","lr2","rf_freq","gbm_freq_hom5","gbm_occurs_xor_libfm")
 coeffs <- c(1, 2, 4, 4, 0.5, 0.5, 1.5, 1.5, 1, 1, 2)
@@ -61,4 +69,4 @@ ens.test <- as.matrix(pred.test.ens[,algs]) %*% (coeffs/sum(coeffs))
 
 subm <- data.frame(Id=pred.test.ens$id,Action=ens.test)
 subm <- subm[order(subm$Id),]
-write.csv(subm,file="prediction.csv",quote=FALSE,row.names=FALSE)
+write.csv(subm,file="prediction_manual.csv",quote=FALSE,row.names=FALSE)
