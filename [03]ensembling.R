@@ -30,7 +30,7 @@ for (alg in algs) {
 }
 
 #find best combination using expand.grid
-a <- as.matrix(expand.grid( rep(list(0:4),length(algs)) ))
+a <- as.matrix(expand.grid( rep(list(0:3),length(algs)) ))
 a <- a[which(rowSums(a)>0),]
 coeffs <- findBestCombination(pred.train.ens[,algs],pred.train.ens[,"action"],a)
 print (coeffs)
@@ -53,7 +53,7 @@ fn.opt <- function(pars) {
 pars <- rep(1/length(algs),length(algs)) 
 opt.result <- optim(pars, fn.opt, control = list(trace = T))
 ens.train <- fn.opt.pred(opt.result$par, pred.train.ens[,algs])
-ens.test <- fn.opt.pred(opt.result$par, pred.test[,algs])
+ens.test <- fn.opt.pred(opt.result$par, pred.test.ens[,algs])
 auc(pred.train.ens[,"action"],ens.train)
 
 subm <- data.frame(Id=pred.test.ens$id,Action=ens.test)
