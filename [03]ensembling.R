@@ -30,7 +30,7 @@ for (alg in algs) {
 }
 
 #find best combination using expand.grid
-a <- as.matrix(expand.grid( rep(list(0:3),length(algs)) ))
+a <- as.matrix(expand.grid( rep(list(0:2),length(algs)) ))
 a <- a[which(rowSums(a)>0),]
 coeffs <- findBestCombination(pred.train.ens[,algs],pred.train.ens[,"action"],a)
 print (coeffs)
